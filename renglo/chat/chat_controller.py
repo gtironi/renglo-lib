@@ -473,7 +473,7 @@ class ChatController:
                 #current_app.logger.debug(f'Prepared data for workspace update: {item}')
                 #print(item)
                 response = self.CHM.update_chat(item)
-                print('Workspace has been updated.')
+                #print('Workspace has been updated.') #legacy print
                 #print(response)
                 return response
             else:

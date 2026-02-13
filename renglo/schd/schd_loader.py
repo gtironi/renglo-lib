@@ -57,7 +57,7 @@ class SchdLoader:
             # Example: "enerclave.handlers.geocoding_handler"
             full_module_path = f"{module_path}.handlers.{module_name}"
 
-            print(f'Loading module: {full_module_path}')
+            #print(f'Loading module: {full_module_path}') #legacy print
 
             # Dynamically import the module
             # This will work if the package is installed (e.g., via pip install)
@@ -66,7 +66,7 @@ class SchdLoader:
             # Get the class from the module
             class_ = getattr(module, class_name)
 
-            print(f'Class loaded: {class_.__name__}')
+            #print(f'Class loaded: {class_.__name__}') #legacy print
 
             # Instantiate the class
             # Check if it needs config (convention: handlers ending in 'onboardings' need config)
@@ -87,7 +87,7 @@ class SchdLoader:
                 #print(f'Creating instance') #legacy print
                 instance = class_()
 
-            print(f'Instance created: {instance.__class__.__name__}')
+            # print(f'Instance created: {instance.__class__.__name__}') #legacy print
             logger.debug(f"Successfully loaded {class_name} from {full_module_path}")
 
             return instance
@@ -134,7 +134,7 @@ class SchdLoader:
         - arbitium/helper_rds/restore-snapshot
         """
         func_name = "load_and_run"
-        #print(f'running: {func_name}') #legacy print
+        # print(f'running: {func_name}') #legacy print
 
         try:
             # Handle both file paths and dot-notation module names
@@ -184,7 +184,7 @@ class SchdLoader:
                 error = f"Class '{class_name}' in '{actual_module_name}' could not be loaded."
                 return {'success':False,'action':func_name,'error':error,'output':error,'status':500}
 
-            print(f'Class Loaded:{class_name}')
+            #print(f'Class Loaded:{class_name}') #legacy print
 
             if check:
                 if hasattr(instance, "check"):

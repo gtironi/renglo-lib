@@ -104,7 +104,7 @@ def load_config():
         for key in dir(env_config):
             if key.isupper() and not key.startswith('_'):
                 config[key] = getattr(env_config, key)
-        print(f"Config loaded from file: {loaded_from}")
+        #print(f"Config loaded from file: {loaded_from}") #legacy print
     else:
         print("Config file not found, using environment variables", file=sys.stderr)
     
