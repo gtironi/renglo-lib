@@ -537,7 +537,7 @@ class DataController:
           - Update document in DB
 
         '''
-        print(f'Running construct_put_item for {portfolio}/{org}/{ring}/{idx}. Payload {payload}')
+        #print(f'Running construct_put_item for {portfolio}/{org}/{ring}/{idx}. Payload {payload}') #Verboso
 
         #1. Pull the document that we need to update
         updated_item = self.DAM.get_a_b_c(portfolio,org,ring,idx) 

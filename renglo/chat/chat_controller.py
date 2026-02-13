@@ -173,9 +173,9 @@ class ChatController:
         
         # Because we don't have 'time' we need to get all the turns, iterate through
         # that list until we find the one that has the 'turn_id' and then return that.
-        
-        print(f'get_turn > INDEX:{index} , QUERY:{query}, TURN_ID:{turn_id}') 
-        
+
+        #print(f'get_turn > INDEX:{index} , QUERY:{query}, TURN_ID:{turn_id}') #Verboso
+
         list_of_turns = self.list_turns(portfolio,org,entity_type,entity_id,thread_id)
         
         for t in list_of_turns['items']:
@@ -262,7 +262,7 @@ class ChatController:
     def update_turn(self,portfolio,org,entity_type, entity_id, thread_id, turn_id, update, call_id=False):
         # Sanitize update early to prevent serialization errors in logging
         update = self._convert_floats_to_strings(update)
-        print(f'CHC:update_turn {entity_type}/{thread_id}/{turn_id}::{call_id}')
+        #print(f'CHC:update_turn {entity_type}/{thread_id}/{turn_id}::{call_id}') #Verboso
         try:
             data = self.get_turn(portfolio,org,entity_type, entity_id, thread_id, turn_id)
             
@@ -277,15 +277,15 @@ class ChatController:
             
             if 'messages' not in item or not isinstance(item['messages'], list):
                 item['messages'] = []
-            
-            
-            if call_id: 
-                print('Call id found:')  
-                print(item['messages'])
+
+
+            if call_id:
+                print('Call id found:')
+                #print(item['messages']) #Verboso
                 for i in item['messages']:
                     if 'tool_call_id' in i['_out'] and i['_out']['tool_call_id'] == call_id:
                         print(f'Found the message with matching id:{i}')
-                        print(f'Replacing with new doc:{update}') 
+                        #print(f'Replacing with new doc:{update}') #Verboso
                         # Find the index of the item in the list
                         index = item['messages'].index(i)
                         # Parse JSON string to Python object and replace content
@@ -313,11 +313,11 @@ class ChatController:
                                 
                             if '_next' in update:
                                 item['messages'][index]['_next'] = update['_next']
-                                
-                                
-                            print(item['messages'][index])
-                            
-                            
+
+
+                            #print(item['messages'][index]) #Verboso
+
+
                         except json.JSONDecodeError as e:
                             print(f"Error parsing JSON content: {e}")
                             # If JSON parsing fails, keep the original string

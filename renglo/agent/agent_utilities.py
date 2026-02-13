@@ -297,7 +297,7 @@ class AgentUtilities:
                 
             elif 'tool_call_id' in output and 'role' in output and output['role'] == 'tool':
                 # This is a response from the tool
-                print(f'Including Tool Response in the chat: {output}')
+                #print(f'Including Tool Response in the chat: {output}') #Verboso
                 # This is the tool response
                 message_type = 'tool_rs'            
                 doc = {'_out': self.sanitize(output), '_type': message_type, '_interface': interface, '_next': next}
@@ -387,8 +387,8 @@ class AgentUtilities:
         Returns:
             bool: Success status
         """
-        print(f'print_chat: {output}')
-        
+        #print(f'print_chat: {output}') #Verboso
+
         if not connection_id:
             #Try the context
             connection_id = self.connection_id
@@ -575,8 +575,8 @@ class AgentUtilities:
                             workspace['state']['history'].append(history_event)
                                 
                 if key == 'cache':
-                    print(f'Updating workspace cache: {output}')
-                    if 'cache' not in workspace: 
+                    #print(f'Updating workspace cache: {output}') #Verboso
+                    if 'cache' not in workspace:
                         workspace['cache'] = {}
                     if isinstance(output, dict):
                         for k, v in output.items():
@@ -622,8 +622,8 @@ class AgentUtilities:
                         if plan_id not in workspace['state_machine']:
                             # It won't override entire state machine if it already exists.
                             workspace['state_machine'][plan_id] = self.sanitize(output)
-                    print(workspace)
-                    
+                    #print(workspace) #Verboso
+
                 if key == 'step_state':
                     
                     #print(f'mutate step_state input:{output}')
@@ -1284,7 +1284,7 @@ class AgentUtilities:
         # Clear content from all tool messages except the last x ones
         for i, message in enumerate(message_list):
             if message.get('role') == 'tool' and i not in tool_indices:
-                print(f'Found a tool message: {message}')
+                #print(f'Found a tool message: {message}') #Verboso
                 # Actually clear the content (set to empty string)
                 message['content'] = ""
             else:
@@ -1301,9 +1301,9 @@ class AgentUtilities:
                     # If content is already a string or other type, sanitize and convert to string
                     sanitized_content = self.sanitize(message.get('content', ''))
                     message['content'] = str(sanitized_content)
-                
-        print(f'Cleared tool message content: {message_list}')
-        
+
+        #print(f'Cleared tool message content: {message_list}') (verbose)
+
         return message_list
     
     
@@ -1803,8 +1803,10 @@ class AgentUtilities:
             print(f'Calling {handler_route} ') 
             
             response = self.SHC.handler_call(portfolio,org,parts[0],parts[1],params)
-            
-            print(f'Handler response:{response}')
+
+            #print(f'Handler response:{response}') #Verboso
+            response_no_output = {k: v for k, v in response.items() if k != 'output'}
+            print(f'Handler response (no output):{response_no_output}')
 
             if not response['success']:
                 return {'success':False,'action':action,'input':params,'output':response}
