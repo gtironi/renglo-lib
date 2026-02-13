@@ -23,24 +23,24 @@ class DecimalEncoder(json.JSONEncoder):
 
 
 class AgentUtilities:
-    def __init__(self, 
-                 config, 
-                 portfolio, 
-                 org, 
-                 entity_type, 
-                 entity_id, 
+    def __init__(self,
+                 config,
+                 portfolio,
+                 org,
+                 entity_type,
+                 entity_id,
                  thread,
                  connection_id = None
                  ):
         """
         Initialize AgentUtilities with configuration and required parameters.
-        
+
         Args:
             config (dict): Configuration dictionary containing API keys, URLs, etc.
-        
+
         Args:
             portfolio (str): Portfolio identifier
-            org (str): Organization identifier  
+            org (str): Organization identifier
             entity_type (str): Type of entity
             entity_id (str): Entity identifier
             thread (str): Thread identifier
@@ -53,9 +53,9 @@ class AgentUtilities:
         self.thread = thread
         self.chat_id = None
         self.connection_id = connection_id
-        
+
         # OpenAI Client
-        try:    
+        try:
             openai_key = self.config.get('OPENAI_API_KEY', '')
             self.AI_1 = OpenAI(api_key=openai_key)
             self.AI_2 = OpenAI(api_key=openai_key)
@@ -67,13 +67,13 @@ class AgentUtilities:
 
         self.AI_1_MODEL = "gpt-3.5-turbo"  # Baseline model. Good for multi-step chats
         self.AI_2_MODEL = "gpt-4o-mini"    # This model is not very smart
-        
+
         # Initialize controllers
         self.DAC = DataController(config=self.config)
         self.DCC = DocsController(config=self.config)
         self.CHC = ChatController(config=self.config)
         self.SHC = SchdController(config=self.config)
-        
+
         # Initialize WebSocket client
         websocket_url = self.config.get('WEBSOCKET_CONNECTIONS', '')
         self.ws_client = WebSocketClient(websocket_url)
@@ -84,33 +84,33 @@ class AgentUtilities:
         filter:{'param':<name>,'begins_with':<value>}
             param: The name of the parameter you are applying the filter: ['_interface','_next','_type']
             value: The begins at string for the value of the parameter to be filtered
-        
+
         Returns:
             dict: Success status and message list
         """
         action = 'get_message_history'
-        
+
         try:
-            print(f'type: {self.entity_type}')
-            print(f'entity_id: {self.entity_id}')
-            print(f'thread: {self.thread}')
-            print(f'filter: {filter}')
-            
-            
+            #print(f'type: {self.entity_type}') #legacy print
+            #print(f'entity_id: {self.entity_id}') #legacy print
+            #print(f'thread: {self.thread}') #legacy print
+            #print(f'filter: {filter}') #legacy print
+
+
             apply_filter = False
             filter_param = None
             filter_value = None
-            
+
             if filter and 'param' in filter and 'begins_with' in filter:
                 filter_param = filter['param']
                 filter_value = filter['begins_with']
                 apply_filter = True
-                    
-        
+
+
             # Thread was not included, create a new one?
             if not self.thread:
                 return {'success': False, 'action': action, 'input': filter, 'output': 'Error: No thread provided'}
-                
+
             response = self.CHC.list_turns(
                 self.portfolio,
                 self.org,
@@ -118,17 +118,17 @@ class AgentUtilities:
                 self.entity_id,
                 self.thread
             )
-             
+
             if 'success' not in response:
                 print(f'Something failed during message list: {response}')
                 return {'success': False, 'action': action, 'input': filter, 'output': response}
-            
+
             # Prepare messages to look like an OpenAI message array
             # Also remove messages that don't belong to an approved type
             message_list = []
-            for turn in response['items']: 
+            for turn in response['items']:
                 for m in turn['messages']:
-                    
+
                     if apply_filter:
                         #print(f'Applying filter in message:{m}')
                         # Check if filter_param exists in message
@@ -140,16 +140,16 @@ class AgentUtilities:
                         if not param_value.startswith(filter_value):
                             #print(f'{param_value} does not begin with:{filter_value}, filter out')
                             continue
-                        
-                        print(f'Include in filtered results')
 
-                    
+                        #print(f'Include in filtered results') #legacy print
+
+
                     out_message = m['_out']
                     if m['_type'] in ['user', 'consent', 'system', 'text', 'tool_rq', 'tool_rs']:  # OK to show to LLM
-                        message_list.append(out_message)      
-            
+                        message_list.append(out_message)
+
             return {'success': True, 'action': action, 'input': filter, 'output': message_list}
-        
+
         except Exception as e:
             print(f'Get message history failed: {str(e)}')
             return {'success': False, 'action': action, 'input': filter, 'output': f'Error: {str(e)}'}
@@ -157,17 +157,17 @@ class AgentUtilities:
     def update_chat_message_document(self, update, call_id=False):
         """
         Update a chat message document.
-        
+
         Args:
             update (dict): The update to apply
             call_id (bool): Whether to use call_id
-            
+
         Returns:
             dict: Success status and response
         """
         action = 'update_chat_message_document'
-        print(f'Running: {action}')
-        
+        #print(f'Running: {action}') #legacy print
+
         try:
             response = self.CHC.update_turn(
                 self.portfolio,
@@ -179,13 +179,13 @@ class AgentUtilities:
                 update,
                 call_id=call_id
             )
-            
+
             if 'success' not in response:
                 print(f'Something failed during update chat message {response}')
                 return {'success': False, 'action': action, 'input': update, 'output': response}
-            
+
             return {'success': True, 'action': action, 'input': update, 'output': response}
-        
+
         except Exception as e:
             print(f'Update chat message failed: {str(e)}')
             return {'success': False, 'action': action, 'output': f'Error: {str(e)}'}
@@ -193,17 +193,17 @@ class AgentUtilities:
     def update_workspace_document(self, update, workspace_id):
         """
         Update a workspace document.
-        
+
         Args:
             update (dict): The update to apply
             workspace_id (str): The workspace ID
-            
+
         Returns:
             dict: Success status and response
         """
         action = 'update_workspace_document'
         #print(f'Running: {action}')
-        
+
         response = self.CHC.update_workspace(
             self.portfolio,
             self.org,
@@ -213,34 +213,34 @@ class AgentUtilities:
             workspace_id,
             update
         )
-        
+
         if 'success' not in response:
             return {'success': False, 'action': action, 'input': update, 'output': response}
-        
+
         return {'success': True, 'action': action, 'input': update, 'output': response}
 
 
 
     def save_chat(self, output, interface=None, connection_id=None, next=None, msg_type=None):
-        
+
         function = 'save_chat'
         """
         Save chat message to storage and context.
-        
+
         Args:
             output (dict): The output to save
             interface (string): name of the interface
-            
+
         Input:
             {
                 'role':'',
                 'tool_calls':'',
-                'content':''     
+                'content':''
             }
         """
         try:
             if msg_type == 'consent':
-                print('Sending consent form')
+                #print('Sending consent form') #legacy print
                 # This is a consent request from the agent to the user
                 message_type = 'consent'
                 if not interface:
@@ -248,9 +248,9 @@ class AgentUtilities:
                 doc = {'_out': self.sanitize(output), '_type': 'consent','_interface':interface,'_next': next}
                 self.update_chat_message_document(doc)
                 self.print_chat(doc,message_type, as_is=True)
-                
+
             elif msg_type == 'widget':
-                print('Custom widget')
+                #print('Custom widget') #legacy print
                 # This is a consent request from the agent to the user
                 message_type = 'widget'
                 if not interface:
@@ -258,19 +258,19 @@ class AgentUtilities:
                 doc = {'_out': self.sanitize(output), '_type': 'widget','_interface':interface}
                 self.update_chat_message_document(doc)
                 self.print_chat(doc,message_type, as_is=True)
-                 
-                
+
+
             elif output.get('tool_calls') and output.get('role') == 'assistant':
-                print('Saving the tool call')
+                #print('Saving the tool call') #legacy print
                 # This is a tool call
                 message_type = 'tool_rq'
                 doc = {'_out': self.sanitize(output), '_type': 'tool_rq','_next': next}
                 # Memorize to permanent storage
-                self.update_chat_message_document(doc)      
-                
+                self.update_chat_message_document(doc)
+
                 # Creating empty placeholders corresponding to each one of the un-executed tool calls.
                 # This was a work-around as OpenAI doesn't like to see a tools_calls without its corresponding response.
-                # It happens because sometimes, the chat messages are passed to the LLM before the tool is executed 
+                # It happens because sometimes, the chat messages are passed to the LLM before the tool is executed
                 # (e.g: Asking the user for approval to use a tool, the agent needs to understand the response using an LLM)
                 for tool_call in output['tool_calls']:
                     rs_template = {
@@ -278,12 +278,12 @@ class AgentUtilities:
                         "tool_call_id": tool_call['id'],
                         "content": []
                     }
-                    print(f'Saving placeholder message for:{tool_call['id']}')
+                    #print(f'Saving placeholder message for:{tool_call['id']}') #legacy print
                     doc_rs_placeholder = {'_out': rs_template, '_type': 'tool_rs','_next': next}
                     self.update_chat_message_document(doc_rs_placeholder)
-                                
+
             elif output.get('content') and output.get('role') == 'assistant':
-                print('Saving the assistant message to the user')
+                #print('Saving the assistant message to the user') #legacy print
                 # This is a human readable message from the agent to the user
                 message_type = 'text'
                 doc = {'_out': self.sanitize(output), '_type': message_type, '_next': next}
@@ -294,17 +294,17 @@ class AgentUtilities:
                 self.print_chat(doc, message_type, as_is=True)
                 # Print to API
                 self.print_api(output['content'], message_type)
-                
+
             elif 'tool_call_id' in output and 'role' in output and output['role'] == 'tool':
                 # This is a response from the tool
                 #print(f'Including Tool Response in the chat: {output}') #Verboso
                 # This is the tool response
-                message_type = 'tool_rs'            
+                message_type = 'tool_rs'
                 doc = {'_out': self.sanitize(output), '_type': message_type, '_interface': interface, '_next': next}
                 # Memorize to permanent storage
                 self.update_chat_message_document(doc, output['tool_call_id'])
-                
-                if interface:  
+
+                if interface:
                     # Parse content if it's a JSON string for websocket (frontend expects object, not string)
                     # Database stores as string, but websocket should send as parsed object
                     doc_for_websocket = doc.copy()
@@ -320,53 +320,53 @@ class AgentUtilities:
                                 # If parsing fails, keep original string
                                 pass
                     self.print_chat(doc_for_websocket, message_type, as_is=True)
-                    
+
         except Exception as e:
             print(f"Error in {function}: {e}")
-            
+
 
 
     def print_api(self, message, type='text', public_user=None):
         """
         Print message to API.
-        
+
         Args:
             message (str): The message to print
             type (str): The message type
             public_user (str): The public user identifier
-            
+
         Returns:
             dict: Success status and response
         """
         action = 'print_api'
-        
+
 
         callback_msg_handler = self.config.get('CALLBACK_MSG_HANDLER', False)
-        
-         
+
+
         try:
             if callback_msg_handler:
                 if public_user:
                     target = public_user
                 else:
                     return {'success': False, 'action': action, 'input': message, 'output': 'This is an internal call, no API output is needed'}
-               
-                params = {'message': message, 'type': type, 'target': target}  
-                
+
+                params = {'message': message, 'type': type, 'target': target}
+
                 parts = callback_msg_handler.split('/')
                 if len(parts) != 2:
                     error_msg = f"{callback_msg_handler} is not a valid tool."
                     print(error_msg)
                     self.print_chat(error_msg, 'error')
                     raise ValueError(error_msg)
-                
-                print(f'Calling {callback_msg_handler}') 
+
+                #print(f'Calling {callback_msg_handler}') #legacy print
                 response = self.SHC.handler_call(self.portfolio, self.org, parts[0], parts[1], params)
-                
+
                 return response
             else:
                 return {'success': False, 'action': action, 'input': message, 'output': ''}
-                
+
         except ValueError as ve:
             print(f"ValueError in {action}: {ve}")
             return {'success': False, 'action': action, 'input': message, 'output': str(ve)}
@@ -377,13 +377,13 @@ class AgentUtilities:
     def print_chat(self, output, type='text', as_is=False, connection_id=None, next= None):
         """
         Print message to chat via WebSocket.
-        
+
         Args:
             output: The output to print
             type (str): The message type
             as_is (bool): Whether to use output as-is
             connection_id (str): The WebSocket connection ID
-            
+
         Returns:
             bool: Success status
         """
@@ -392,91 +392,92 @@ class AgentUtilities:
         if not connection_id:
             #Try the context
             connection_id = self.connection_id
-        
+
         if as_is:
-            doc = output  
-        elif isinstance(output, dict) and 'role' in output and 'content' in output and output['role'] and output['content']: 
-            # Content responses from LLM  
-            doc = {'_out': {'role': output['role'], 'content': self.sanitize(output['content'])}, '_type': type, '_next:':next}      
+            doc = output
+        elif isinstance(output, dict) and 'role' in output and 'content' in output and output['role'] and output['content']:
+            # Content responses from LLM
+            doc = {'_out': {'role': output['role'], 'content': self.sanitize(output['content'])}, '_type': type, '_next:':next}
         elif isinstance(output, str):
             # Any text response
-            doc = {'_out': {'role': 'assistant', 'content': str(output)}, '_type': type, '_next:':next}     
+            doc = {'_out': {'role': 'assistant', 'content': str(output)}, '_type': type, '_next:':next}
         else:
             # Everything else
-            doc = {'_out': {'role': 'assistant', 'content': self.sanitize(output)}, '_type': type, '_next:':next} 
-            
+            doc = {'_out': {'role': 'assistant', 'content': self.sanitize(output)}, '_type': type, '_next:':next}
+
         if not connection_id:
             #print(f'WebSocket not configured or this is a RESTful post to the chat.')
             return False
-        
+
         if not self.ws_client.is_configured():
             return False
-        
+
         #print(f'Sending Websocket Message to client. ConnectionId:{connection_id}')
         success = self.ws_client.send_message(connection_id, doc)
-        
+
         if success:
-            print(f'Message has been updated')
-        
+            pass
+            #print(f'Message has been updated') #legacy print
+
         return success
-        
+
     # Helper function to safely get a step in the state machine by step_id
     def get_or_create_step(self, workspace, plan_id, plan_step):
         """
         Safely get a step in the state machine by matching step_id.
         The plan_step parameter is the step_id (not a list index).
         We search through the steps list to find the step with matching step_id.
-        
+
         Args:
             workspace: The workspace dictionary
             plan_id: The plan ID
             plan_step: The step_id to find (as string or int)
-            
+
         Returns:
             dict: The step dictionary with matching step_id
-            
+
         Raises:
             IndexError: If the step with the given step_id is not found
         """
         if 'state_machine' not in workspace:
             workspace['state_machine'] = {}
-        
+
         if plan_id not in workspace['state_machine']:
             workspace['state_machine'][plan_id] = {'steps': []}
-        
+
         if 'steps' not in workspace['state_machine'][plan_id]:
             workspace['state_machine'][plan_id]['steps'] = []
-        
+
         steps = workspace['state_machine'][plan_id]['steps']
         target_step_id = str(plan_step)  # Normalize to string for comparison
-        
+
         # Search for the step by step_id (not by index)
         for step in steps:
             # Handle both string and int step_id values
             step_id = str(step.get('step_id', ''))
             if step_id == target_step_id:
                 return step
-        
+
         # If step not found, raise an error - we should not create steps that don't exist in the plan
         raise IndexError(f"Step with step_id '{plan_step}' not found in state machine for plan_id '{plan_id}'. The state machine has {len(steps)} step(s).")
 
     def mutate_workspace(self, changes, public_user=None, workspace_id=None):
         """
         Mutate workspace with changes.
-        
+
         Args:
             changes (dict): The changes to apply
             public_user (str): The public user identifier
             workspace_id (str): The workspace ID
-            
+
         Returns:
             bool: Success status
         """
         try:
-        
+
             if not self.thread:
                 return False
-            
+
             if public_user:
                 payload = {'context': {'public_user': public_user}}
             else:
@@ -485,8 +486,8 @@ class AgentUtilities:
             # Sanitize changes early to prevent serialization errors in logging
             changes = self.sanitize(changes)
             first_key = next(iter(changes), None)
-            print("MUTATE_WORKSPACE>>", first_key)
-        
+            #print("MUTATE_WORKSPACE>>", first_key) #legacy print
+
             # 1. Get the workspace in this thread
             #print(f'Looking for workspaces @:{self.portfolio}:{self.org}:{self.entity_type}:{self.entity_id}:{self.thread} ')
             workspaces_list = self.CHC.list_workspaces(
@@ -495,12 +496,12 @@ class AgentUtilities:
                 self.entity_type,
                 self.entity_id,
                 self.thread
-            ) 
-            #print('WORKSPACES_LIST >>', workspaces_list) 
-            
+            )
+            #print('WORKSPACES_LIST >>', workspaces_list) #verbose
+
             if not workspaces_list['success']:
                 return False
-            
+
             if len(workspaces_list['items']) == 0:
                 # Create a workspace as none exist
                 response = self.CHC.create_workspace(
@@ -509,7 +510,7 @@ class AgentUtilities:
                     self.entity_type,
                     self.entity_id,
                     self.thread, payload
-                ) 
+                )
                 if not response['success']:
                     return False
                 # Regenerate workspaces_list
@@ -519,30 +520,30 @@ class AgentUtilities:
                     self.entity_type,
                     self.entity_id,
                     self.thread
-                ) 
-                #print('UPDATED WORKSPACES_LIST >>>>', workspaces_list) 
-                
+                )
+                #print('UPDATED WORKSPACES_LIST >>>>', workspaces_list) #Verbose
+
             if not workspace_id:
                 workspace = workspaces_list['items'][-1]
             else:
                 for w in workspaces_list['items']:
                     if w['_id'] == workspace_id:
                         workspace = w
-                        
+
             # CRITICAL: Sanitize workspace immediately after retrieval from database
             # This converts all Decimals before any merging or manipulation
             workspace = self.sanitize(workspace)
-            #print('Selected workspace >>>>', workspace) 
+            #print('Selected workspace >>>>', workspace) #Verbose
             if 'state' not in workspace:
                 workspace['state'] = {
                     "beliefs": {},
-                    "desire": '',           
-                    "intent": [],       
-                    "history": [],          
-                    "in_progress": None    
+                    "desire": '',
+                    "intent": [],
+                    "history": [],
+                    "in_progress": None
                 }
-            
-                
+
+
             # 2. Store the output in the workspace
             for key, output in changes.items():
                 if key == 'belief':
@@ -552,16 +553,16 @@ class AgentUtilities:
                         sanitized_output = self.sanitize(output)
                         merged_beliefs = {**workspace['state']['beliefs'], **sanitized_output}
                         workspace['state']['beliefs'] = self.sanitize(merged_beliefs)
-                        
+
                 if key == 'desire':
                     if isinstance(output, str):
                         workspace['state']['desire'] = output
-                        
+
                 if key == 'intent':
                     if isinstance(output, dict):
                         # Sanitize nested intent data to ensure no Decimals slip through
-                        workspace['state']['intent'] = self.sanitize(output) 
-                        
+                        workspace['state']['intent'] = self.sanitize(output)
+
                 if key == 'belief_history':
                     if isinstance(output, dict):
                         # Now update the belief history
@@ -573,7 +574,7 @@ class AgentUtilities:
                                 'time': datetime.now().isoformat()
                             }
                             workspace['state']['history'].append(history_event)
-                                
+
                 if key == 'cache':
                     #print(f'Updating workspace cache: {output}') #Verboso
                     if 'cache' not in workspace:
@@ -585,25 +586,25 @@ class AgentUtilities:
                     elif isinstance(output, list):
                         # For lists, sanitize each element and store as 'results'
                         workspace['cache']['results'] = self.sanitize(output)
-                
+
                 if key == 'is_active':
                     if isinstance(output, bool):
                         workspace['data'] = output  # Output overrides existing data
-                        
+
                 if key == 'action':
                     if isinstance(output, str):
                         workspace['state']['action'] = output  # Output overrides existing data
-                        
+
                 if key == 'follow_up':
                     if isinstance(output, dict):
                         # Sanitize nested follow_up data to ensure no Decimals slip through
                         workspace['state']['follow_up'] = self.sanitize(output)
-                        
+
                 if key == 'slots':
                     if isinstance(output, dict):
                         # Sanitize nested slots data to ensure no Decimals slip through
                         workspace['state']['slots'] = self.sanitize(output)
-                        
+
                 if key == 'plan':
                     if isinstance(output, dict):
                         plan_id = output['id']
@@ -611,7 +612,7 @@ class AgentUtilities:
                             workspace['plan'] = {}
                         # Sanitize nested plan data to ensure no Decimals slip through
                         workspace['plan'][plan_id] = self.sanitize(output)
-                        
+
                 if key == 'new_state_machine':
                     print('Initializing state machine')
                     if isinstance(output, dict):
@@ -625,28 +626,28 @@ class AgentUtilities:
                     #print(workspace) #Verboso
 
                 if key == 'step_state':
-                    
+
                     #print(f'mutate step_state input:{output}')
                     if isinstance(output, dict):
-                        
+
                         if 'plan_id' in output and 'plan_step' in output:
                             plan_id = output['plan_id']
                             plan_step = output['plan_step']
-                            
+
                             # Use helper function to safely get or create the step
                             step = self.get_or_create_step(workspace, plan_id, plan_step)
-                             
+
                             if 'status' in output:
                                 step['status'] = output['status']
-                            if 'error' in output: 
+                            if 'error' in output:
                                 step['error'] = output['error']
                             if 'started_at' in output:
                                 step['started_at'] = output['started_at']
                             if 'finished_at' in output:
                                 step['finished_at'] = output['finished_at']
-                                
+
                     #print(f'State Machine after mutate step_state:{workspace["state_machine"]}')
-                
+
                 if key == 'plan_state':
                     if isinstance(output, dict):
 
@@ -654,13 +655,13 @@ class AgentUtilities:
 
                         if 'plan_id' in output :
                             plan_id = output['plan_id']
-   
+
                             if 'status' in output:
                                 workspace['state_machine'][plan_id] = output['status']
                             if 'updated_at' in output:
                                 workspace['state_machine'][plan_id] = output['updated_at']
-                            
-                        
+
+
                 if key == 'action_log':
                     if isinstance(output, dict):
                         '''
@@ -676,7 +677,7 @@ class AgentUtilities:
                         '''
                         # Storing action_log:{'plan_id': 'd6e47334', 'plan_step': '0', 'tool': 'search_flights', 'status': 3, 'details': {'commands': [{'id': 'call_tMtY0uDa3WAnl9kyz9MqXnhA', 'function': {'arguments': '{"from_airport_code":"DFW","to_airport_code":"JFK","outbound_date":"2026-01-25","return_date":"2026-02-01"}', 'name': 'search_flights'}, 'type': 'function'}], 'interface': 'binary_consent', 'nonce': 116360, 'message': {'role': 'assistant', 'content': 'I would like to call search_flights tool with the following parameters:from_airport_code: DFW, to_airport_code: JFK, outbound_date: 2026-01-25, return_date: 2026-02-01. Please confirm it is ok'}}}
 
-                        print(f'Storing action_log:{output}')
+                        #print(f'Storing action_log:{output}') #legacy print
                         plan_id = output['plan_id']
                         plan_step = output['plan_step']
                         log = {}
@@ -690,22 +691,22 @@ class AgentUtilities:
                             log['message'] = output['message']
                         if 'type' in output:
                             log['type'] = output['type']
-                        
+
                         # Use helper function to safely get or create the step
                         step = self.get_or_create_step(workspace, plan_id, plan_step)
-                        
+
                         if 'action_log' not in step:
                             step['action_log'] = []
-                        
+
                         step['action_log'].append(log)
-                        
-                        print(f'Log to add to action_log:{log}')
+
+                        #print(f'Log to add to action_log:{log}') #legacy print
                         #print(f'Updated workspace after adding item to action_log:{workspace}')
-                        
-                        
-                            
+
+
+
              # 3. Update document in DB
-       
+
             # Sanitize the entire workspace object to convert Decimals before updating
             sanitized_workspace = self.sanitize(workspace)
             #print(f'WORSKPACE > Inserting updated workspace')
@@ -714,7 +715,7 @@ class AgentUtilities:
                 workspace['_id']
             )
             return True
-        
+
         except Exception as e:
             print(f'Error updating workspace: {str(e)}')
             return False
@@ -722,15 +723,15 @@ class AgentUtilities:
     def llm(self, prompt):
         """
         Call the LLM with the given prompt.
-        
+
         Args:
             prompt (dict): The prompt to send to the LLM
-            
+
         Returns:
             The LLM response or False if error
         """
-        
-        
+
+
         try:
             # Create base parameters
             params = {
@@ -738,7 +739,7 @@ class AgentUtilities:
                 'messages': '',
                 'temperature': 0.0
             }
-        
+
             # Add optional parameters if they exist
             if 'model' in prompt:
                 params['model'] = prompt['model']
@@ -752,79 +753,79 @@ class AgentUtilities:
                 params['tool_choice'] = prompt['tool_choice']
             if 'response_format' in prompt:
                 params['response_format'] = prompt['response_format']
-                
+
             # AI_1 is gpt-3.5-turbo which doesn't support structured outputs. AI_2 uses gpt-4o-mini which does.
-            # response = self.AI_1.chat.completions.create(**params)     
-            response = self.AI_2.chat.completions.create(**params) 
-            
+            # response = self.AI_1.chat.completions.create(**params)
+            response = self.AI_2.chat.completions.create(**params)
+
             return response.choices[0].message
- 
+
         except Exception as e:
             print(f"Error running LLM call: {e}")
             return False
-        
-    
+
+
     def new_chat_thread_document(self,public_user=''):
         """
         Check if thread exists and if not create new one
-        
+
         """
         action = 'new_chat_thread_document'
-        print(f'Running: {action}')
-        
+        #print(f'Running: {action}') #legacy print
+
         try:
         # List threads
             threads = self.CHC.list_threads(self.portfolio,self.org,self.entity_type,self.entity_id)
-            print(f'List Threads: {threads}')
-            
+            #print(f'List Threads: {threads}') #legacy print
+
             if 'success' in threads:
                 if len(threads['items']) < 1:
                     # No threads found
-                    print('Creating new thread')
+                    #print('Creating new thread') #legacy print
                     response_2 = self.CHC.create_thread(self.portfolio,self.org,self.entity_type, self.entity_id, public_user=public_user)
-                    
+
                     if not response_2.get('success'):
-                        print(f'Failed to create thread: {response_2}')
+                        #print(f'Failed to create thread: {response_2}') #legacy print
                         return {'success': False,'action': action,'input': '','output': response_2}
-                
+
                     thread = response_2['document']
-                    
+
                 else:
-                    thread = threads['items'][0]   
+                    thread = threads['items'][0]
                 return {
                     'success': True,'action': action,'output': thread
                 }
-                
-            else: 
+
+            else:
                 return {
                     'success': False,'action': action,'output': thread
                 }
-                
-                
-        
+
+
+
         except Exception as e:
-            
+
             print(f"Error getting/creating thread: {e}")
             return {'success': False,'action': action,'output': f"{e}"}
-                 
+
 
 
     def new_chat_message_document(self, message, public_user=None, next=None):
         """
         Create a new chat message document.
-        
+
         Args:
             message (str): The message content
             public_user (str): The public user identifier
-            
+
         Returns:
             dict: Success status and response
         """
         action = 'new_chat_message_document'
-        print(f'Running: {action}')  
-        
+        #print(f'Running: {action}') #legacy print
+
         try:
-        
+
             message_context = {}
             message_context['portfolio'] = self.portfolio
             message_context['org'] = self.org
@@ -832,19 +833,19 @@ class AgentUtilities:
             message_context['entity_type'] = self.entity_type
             message_context['entity_id'] = self.entity_id
             message_context['thread'] = self.thread
-            
+
             new_message = {"role": "user", "content": message}
             msg_wrap = {
                 "_out": new_message,
                 "_type": "text",
-                "_next": next   
+                "_next": next
             }
-            
+
             # Append new message to permanent storage
             message_object = {}
             message_object['context'] = message_context
             message_object['messages'] = [msg_wrap]
-                    
+
             response = self.CHC.create_turn(
                 self.portfolio,
                 self.org,
@@ -853,13 +854,13 @@ class AgentUtilities:
                 self.thread,
                 message_object
             )
-            
+
             '''
             response format
-            
+
             {
-                "success":BOOL, 
-                "message": STRING, 
+                "success":BOOL,
+                "message": STRING,
                 "document": {
                     'author_id': STRING,
                     'time': STRING,
@@ -868,40 +869,40 @@ class AgentUtilities:
                     'messages': STRING,
                     'index': STRING,
                     'entity_index': STRING,
-                    '_id': STRING 
+                    '_id': STRING
                 },
                 "status" : STRING
             }
-            
+
             '''
-            
-            
+
+
             if 'document' in response and '_id' in response['document']:
                 self.chat_id = response['document']['_id']
-            
-            print(f'Response: {response}')
-        
+
+            #print(f'Response: {response}') #legacy print
+
             if 'success' not in response:
                 return {'success': False, 'action': action, 'input': message, 'output': response}
-            
+
             return {'success': True, 'action': action, 'input': message, 'output': response['document']}
-        
-        
+
+
         except Exception as e:
-            
+
             print(f"Error getting/creating turn: {e}")
             return {'success': False,'action': action,'input': '','output': f"{e}"}
-          
-        
-        
+
+
+
 
     def get_active_workspace(self, workspace_id=None):
         """
         Get the active workspace.
-        
+
         Args:
             workspace_id (str): The workspace ID to get
-            
+
         Returns:
             dict: The workspace or False if not found
         """
@@ -911,14 +912,14 @@ class AgentUtilities:
             self.entity_type,
             self.entity_id,
             self.thread
-        ) 
-        
+        )
+
         if not workspaces_list['success']:
             return False
-        
+
         if len(workspaces_list['items']) == 0:
             return False
-        
+
         if not workspace_id:
             workspace = workspaces_list['items'][-1]
         else:
@@ -928,17 +929,17 @@ class AgentUtilities:
                     break
             else:
                 return False
-        
+
         # Sanitize workspace before returning to ensure no Decimals are present
         return self.sanitize(workspace)
 
     def sanitize(self, obj):
         """
         Sanitize an object for JSON serialization.
-        
+
         Args:
             obj: The object to sanitize
-            
+
         Returns:
             The sanitized object
         """
@@ -962,52 +963,52 @@ class AgentUtilities:
         """
         Prunes the history list to keep only the most recent value for each key while maintaining chronological order.
         Objects at the bottom of the list are newer.
-        
+
         Args:
             history (list): List of belief objects with key, val, time, and type fields
-            
+
         Returns:
             list: Pruned history list with only the most recent value for each key
         """
         # Create a dictionary to track the most recent value for each key
         latest_values = {}
-        
+
         # First pass: identify the most recent value for each key
         for item in history:
             key = item['key']
             latest_values[key] = item
-        
+
         # Second pass: create new list maintaining original order but only including latest values
         pruned_history = []
         seen_keys = set()
-        
+
         # Iterate through history in reverse to maintain chronological order
         for item in reversed(history):
             key = item['key']
             if key not in seen_keys:
                 pruned_history.append(item)
                 seen_keys.add(key)
-        
+
         # Reverse back to maintain original order (newest at bottom)
         return list(reversed(pruned_history))
 
     def string_from_object(self, object: dict) -> str:
         """
         Converts a dictionary into a formatted string.
-        
+
         Args:
             object (dict): Dictionary containing key-value pairs
-            
+
         Returns:
             str: Formatted string with key-value pairs separated by commas
-            
+
         Example:
             Input: {"origin": "NYC", "destination": "SF", "departure_date": "2025-06-20", "guest_count": 4}
             Output: "origin = NYC, destination = SF, departure_date = 2025-06-20, guest_count = 4"
         """
         if not object:
             return ""
-            
+
         formatted_pairs = []
         for key, value in object.items():
             # Convert value to string and handle different types appropriately
@@ -1017,9 +1018,9 @@ class AgentUtilities:
                 formatted_value = value
             else:
                 formatted_value = str(value)
-                
+
             formatted_pairs.append(f"{key} = {formatted_value}")
-            
+
         return ", ".join(formatted_pairs)
 
     def format_object_to_slash_string(self, obj: dict) -> str:
@@ -1027,20 +1028,20 @@ class AgentUtilities:
         Converts an object into a string with values separated by slashes.
         If a value is not a string, it will be replaced with an empty space.
         Keys are sorted alphabetically to ensure consistent output regardless of input order.
-        
+
         Args:
             obj (dict): Dictionary containing key-value pairs
-            
+
         Returns:
             str: Formatted string with values separated by slashes
-            
+
         Example:
             Input: {"people": "4", "time": "16:00", "date": "2025-06-04"}
             Output: "2025-06-04/4/16:00"
         """
         if not obj:
             return ""
-            
+
         values = []
         # Sort keys alphabetically
         for key in sorted(obj.keys()):
@@ -1049,20 +1050,20 @@ class AgentUtilities:
                 values.append(value)
             else:
                 values.append("")
-                
+
         return "/".join(values)
 
     def clean_json_response(self, response):
         """
         Cleans and validates a JSON response string from LLM.
-        
+
         Args:
             response (str): The raw JSON response string from LLM
-            
+
         Returns:
             dict: The parsed JSON object if successful
             None: If parsing fails
-            
+
         Raises:
             json.JSONDecodeError: If the response cannot be parsed as JSON
         """
@@ -1072,46 +1073,46 @@ class AgentUtilities:
             # Remove any comments (both single-line and multi-line)
             cleaned_response = re.sub(r'//.*?$', '', cleaned_response, flags=re.MULTILINE)  # Remove single-line comments
             cleaned_response = re.sub(r'/\*.*?\*/', '', cleaned_response, flags=re.DOTALL)  # Remove multi-line comments
-            
+
             # First try to parse as is
             try:
                 return json.loads(cleaned_response)
             except json.JSONDecodeError:
                 pass
-                
+
             # If that fails, try to fix common issues
             # Handle unquoted property names at the start of the object
             cleaned_response = re.sub(r'^\s*{\s*(\w+)(\s*:)', r'{"\1"\2', cleaned_response)
-            
+
             # Handle unquoted property names after commas
             cleaned_response = re.sub(r',\s*(\w+)(\s*:)', r',"\1"\2', cleaned_response)
-            
+
             # Handle unquoted property names after newlines
             cleaned_response = re.sub(r'\n\s*(\w+)(\s*:)', r'\n"\1"\2', cleaned_response)
-            
+
             # Replace single quotes with double quotes for property names
             cleaned_response = re.sub(r'([{,]\s*)\'(\w+)\'(\s*:)', r'\1"\2"\3', cleaned_response)
-            
+
             # Replace single quotes with double quotes for string values
             # This regex looks for : 'value' pattern and replaces it with : "value"
             cleaned_response = re.sub(r':\s*\'([^\']*)\'', r': "\1"', cleaned_response)
-            
+
             # Remove spaces between colons and boolean values
             cleaned_response = re.sub(r':\s+(true|false|True|False)', r':\1', cleaned_response)
-            
+
             # Remove trailing commas in objects and arrays
             # This regex will match a comma followed by whitespace and then a closing brace or bracket
             cleaned_response = re.sub(r',(\s*[}\]])', r'\1', cleaned_response)
-            
+
             # Remove any timestamps in square brackets
             cleaned_response = re.sub(r'\[\d+\]\s*', '', cleaned_response)
-            
+
             # Try to parse the cleaned response
             try:
                 return json.loads(cleaned_response)
             except json.JSONDecodeError as e:
                 print(f"First attempt failed. Error: {e}")
-                
+
                 # If first attempt fails, try to fix the raw field specifically
                 # Find the raw field and ensure it's properly formatted
                 raw_match = re.search(r'"raw":\s*({[^}]+})', cleaned_response)
@@ -1121,9 +1122,9 @@ class AgentUtilities:
                     raw_content = raw_content.replace("'", '"')
                     # Replace the raw field with the cleaned version
                     cleaned_response = cleaned_response[:raw_match.start(1)] + raw_content + cleaned_response[raw_match.end(1):]
-                
+
                 return json.loads(cleaned_response)
-        
+
         except json.JSONDecodeError as e:
             print(f"Error parsing cleaned JSON response: {e}")
             raise
@@ -1131,10 +1132,10 @@ class AgentUtilities:
     def _convert_to_dict(self, obj):
         """
         Recursively converts an OpenAI response object to a dictionary.
-        
+
         Args:
             obj: The object to convert (can be ChatCompletionMessage, ChatCompletionMessageToolCall, etc.)
-            
+
         Returns:
             dict: The converted dictionary
         """
@@ -1150,13 +1151,13 @@ class AgentUtilities:
     def remove_outer_escape(self, double_escaped_string):
         """
         Removes the outer escape from a double-escaped JSON string.
-        
+
         Args:
             double_escaped_string (str): A string that has been escaped twice
-            
+
         Returns:
             str: The cleaned JSON string, or None if parsing fails
-            
+
         Example:
             Input: '"{\\"raw_document\\":\\"Wood Property\\\\n1/25 Wellington Street...\\"}"'
             Output: '{"raw_document": "Wood Property\n1/25 Wellington Street..."}'
@@ -1164,7 +1165,7 @@ class AgentUtilities:
         try:
             # First, parse the outer JSON string to get the inner escaped string
             outer_parsed = json.loads(double_escaped_string)
-            
+
             # Then parse the inner string to get the actual JSON object
             if isinstance(outer_parsed, str):
                 inner_parsed = json.loads(outer_parsed)
@@ -1173,7 +1174,7 @@ class AgentUtilities:
             else:
                 # If it's already a dict, convert back to string
                 return json.dumps(outer_parsed)
-                
+
         except json.JSONDecodeError as e:
             print(f"Error parsing double-escaped JSON: {e}")
             return None
@@ -1181,61 +1182,61 @@ class AgentUtilities:
     def validate_interpret_openai_llm_response(self, raw_response: dict) -> dict:
         """
         Validates that the LLM response follows the expected format.
-        
+
         Args:
             raw_response (dict): The raw response from the LLM
-            
+
         Returns:
             dict: Validation result with success status and output
         """
         action = 'validate_interpret_openai_llm_response'
         # Convert OpenAI response object to dictionary if needed
-        response = self._convert_to_dict(raw_response)     
-        
+        response = self._convert_to_dict(raw_response)
+
         # Check if response has required 'role' field
         if 'role' not in response:
             return {"success": False, "action": action, "input": response, "output": "Response missing required 'role' field"}
-            
+
         # Check if role is 'assistant'
         if response['role'] != 'assistant':
             return {"success": False, "action": action, "input": response, "output": "Response role must be 'assistant'"}
-            
+
         # Check if response has either 'content' or 'tool_calls'
         has_content = 'content' in response and response['content'] is not None
         has_tool_calls = 'tool_calls' in response and response['tool_calls'] is not None
-        
+
         if not (has_content or has_tool_calls):
             return {"success": False, "action": action, "input": response, "output": "Response must have either non-null 'content' or non-null 'tool_calls'"}
-            
+
         if has_content and has_tool_calls:
             # If this happens, remove content so the message is still compliant
             response['content'] = ''
-            
+
         # If it's a tool call, validate the tool_calls structure
         if has_tool_calls:
             if not isinstance(response['tool_calls'], list):
                 return {"success": False, "action": action, "input": response, "output": "'tool_calls' must be a list"}
-                
+
             for tool_call in response['tool_calls']:
                 if not isinstance(tool_call, dict):
                     return {"success": False, "action": action, "input": response, "output": "Each tool call must be a dictionary"}
-                    
+
                 required_fields = ['id', 'type', 'function']
                 for field in required_fields:
                     if field not in tool_call or tool_call[field] is None:
                         return {"success": False, "action": action, "input": response, "output": f"Tool call missing required field '{field}' or field is null"}
-                        
+
                 if tool_call['type'] != 'function':
                     return {"success": False, "action": action, "input": response, "output": "Tool call type must be 'function'"}
-                    
+
                 if not isinstance(tool_call['function'], dict):
                     return {"success": False, "action": action, "input": response, "output": "Tool call 'function' must be a dictionary"}
-                    
+
                 function_required_fields = ['name', 'arguments']
                 for field in function_required_fields:
                     if field not in tool_call['function'] or tool_call['function'][field] is None:
                         return {"success": False, "action": action, "input": response, "output": f"Tool call function missing required field '{field}' or field is null"}
-                        
+
                 # Validate that arguments is a valid JSON string
                 try:
                     if isinstance(tool_call['function']['arguments'], str):
@@ -1252,22 +1253,22 @@ class AgentUtilities:
                             return {"success": False, "action": action, "input": response, "output": "Tool call arguments must be a valid JSON string after cleaning"}
                     else:
                         return {"success": False, "action": action, "input": response, "output": "Tool call arguments must be a valid JSON string"}
-                    
+
         # If it's a content response, validate content is a string
         if has_content and not isinstance(response['content'], str):
             return {"success": False, "action": action, "input": response, "output": "Content must be a string"}
-            
+
         return {"success": True, "action": action, "output": response}
 
     def clear_tool_message_content(self, message_list, recent_tool_messages=1):
         """
         Clear content from all tool messages except the last x ones.
         This prevents overwhelming the LLM with tool output history.
-        
+
         Args:
             message_list: List of messages to process
             recent_tool_messages: Number of recent tool messages to keep with content (default: 1)
-            
+
         Returns:
             list: The processed message list
         """
@@ -1280,7 +1281,7 @@ class AgentUtilities:
                 tool_indices.append(i)
                 if len(tool_indices) >= recent_tool_messages:
                     break
-        
+
         # Clear content from all tool messages except the last x ones
         for i, message in enumerate(message_list):
             if message.get('role') == 'tool' and i not in tool_indices:
@@ -1305,8 +1306,8 @@ class AgentUtilities:
         #print(f'Cleared tool message content: {message_list}') (verbose)
 
         return message_list
-    
-    
+
+
     def pre_process_message(self, message, list_actions=[]):
         """
         Combined function that processes a message through multiple stages in a single LLM call:
@@ -1318,11 +1319,11 @@ class AgentUtilities:
         """
         action = 'pre_process_message'
         self.print_chat('Pre-processing message...', 'transient')
-        
-        try:        
+
+        try:
             # Get current time and date
             current_time = datetime.now().strftime("%Y-%m-%d")
-             
+
             dict_actions = {}
             for a in list_actions:
                 dict_actions[a['key']] = {
@@ -1331,13 +1332,13 @@ class AgentUtilities:
                     'utterances': a.get('utterances', ''),
                     'slots': a.get('slots', '')
                 }
-            
+
             # Get current workspace
             workspace = self.get_active_workspace()
             current_action = workspace.get('state', {}).get('action', '') if workspace else ''
             last_belief = workspace.get('state', {}).get('belief', {}) if workspace else {}
             belief_history = workspace.get('state', {}).get('history', []) if workspace else []
-                    
+
             # Clean and prepare belief history if provided
             cleaned_belief_history = self.sanitize(belief_history) if belief_history else []
             pruned_belief_history = self.prune_history(cleaned_belief_history) if cleaned_belief_history else []
@@ -1470,108 +1471,108 @@ class AgentUtilities:
                 "temperature":0
             }
             response = self.llm(prompt)
-            
+
             if not response.content:
                 raise Exception('LLM response is empty')
-                
-            
+
+
             #print(f'PROCESS MESSAGE PROMPT >> {prompt}')
             result = self.clean_json_response(response.content)
             sanitized_result = self.sanitize(result)
-            
+
             # Update workspace with the results
             if 'facts' in sanitized_result:
                 self.mutate_workspace({'belief': sanitized_result['facts']})
-            
+
             if 'desire' in sanitized_result:
                 self.mutate_workspace({'desire': sanitized_result['desire']})
-            
+
             if 'action_match' in sanitized_result and 'action' in sanitized_result['action_match']:
-                # Check if action.key is used instead of action.name  
+                # Check if action.key is used instead of action.name
                 self.mutate_workspace({'action': sanitized_result['action_match']['action']})
-            
+
             # Update belief history with new entities
             if 'belief_history_updates' in sanitized_result:
                 for update in sanitized_result['belief_history_updates']:
                     self.mutate_workspace({'belief_history': {update['key']: update['val']}})
-            
+
             #self.print_chat(sanitized_result, 'json')
-             
+
             return {
                 'success': True,
-                'action': action, 
+                'action': action,
                 'input': message,
                 'output': sanitized_result
             }
-            
+
         except Exception as e:
             print(f"Error Pre-Processing message: {e}")
             # Only print raw response if it exists
-            
+
             return {
                 'success': False,
                 'action': action,
                 'input': message,
                 'output': str(e)
             }
-    
-    
-    
+
+
+
     def interpret(self, no_tools=False, list_actions=[], list_tools=[]):
-        
+
         action = 'interpret'
         self.print_chat('Interpreting message...', 'transient')
-        print('interpret')
-        
+        #print('interpret') #legacy print
+
         try:
-            # We get the message history directly from the source of truth to avoid missing tool id calls. 
+            # We get the message history directly from the source of truth to avoid missing tool id calls.
             message_list = self.get_message_history()
-            
+
             #print(f'Raw Message History: {message_list}')
-            
+
             # Go through the message_list and replace the value of the 'content' attribute with an empty object when the role is 'tool'
-            # Unless the last message it a tool response which the interpret function needs to process. 
-            # The reason is that we don't want to overwhelm the LLM with the contents of the history of tool outputs. 
-            
+            # Unless the last message it a tool response which the interpret function needs to process.
+            # The reason is that we don't want to overwhelm the LLM with the contents of the history of tool outputs.
+
             # Clear content from all tool messages except the last one
             message_list = self.clear_tool_message_content(message_list['output'])
-            
+
             #print(f'Cleared Message History: {message_list}')
-            
-            
+
+
             # Get current time and date
             current_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-            
+
             # Workspace
             workspace = self.get_active_workspace()
-            
-            # Action  
+
+            # Action
             current_action = workspace.get('state', {}).get('action', '') if workspace else ''
-            print(f'Current Action:{current_action}')
-            
-            action_instructions = '' 
+            #print(f'Current Action:{current_action}') #legacy print
+
+            action_instructions = ''
             action_tools = ''
-            
+
             for a in list_actions:
                 if a['key'] == current_action:
                     action_instructions = a['prompt_3_reasoning_and_planning']
-                    if 'tools_reference' in a and a['tools_reference'] and a['tools_reference'] not in ['_','-','.']: 
+                    if 'tools_reference' in a and a['tools_reference'] and a['tools_reference'] not in ['_','-','.']:
                         action_tools = a['tools_reference']
                     break
 
-            # Belief  
+            # Belief
             current_beliefs = workspace.get('state', {}).get('beliefs', {}) if workspace else {}
             belief_str = 'Current beliefs: ' + self.string_from_object(current_beliefs)
-            print(f'Current Belief:{belief_str}')
-                
-            #belief_history = workspace.get('state', {}).get('history', []) if workspace else []             
+            #print(f'Current Belief:{belief_str}') #legacy print
+
+            #belief_history = workspace.get('state', {}).get('history', []) if workspace else []
             #cleaned_belief_history = self.sanitize(belief_history) if belief_history else []
             #pruned_belief_history = self.prune_history(cleaned_belief_history) if cleaned_belief_history else []
 
             # Desire
             current_desire = workspace.get('state', {}).get('desire', '') if workspace else ''
-            print(f'Current Desire:{current_desire}')
-            
+            #print(f'Current Desire:{current_desire}') #legacy print
+
             # Meta Instructions
             meta_instructions = {}
             # Initial instructions
@@ -1580,59 +1581,59 @@ class AgentUtilities:
             meta_instructions['current_time'] = f'The current time is: {current_time}'
             # Message to answer questions from the belief system
             meta_instructions['answer_from_belief'] = "You can reason over the message history and known facts (beliefs) to answer user questions. If the user asks a question, check the history or beliefs before asking again."
-                  
+
             # Message array
             messages = [
                 { "role": "system", "content": meta_instructions['opening_message']}, # META INSTRUCTIONS
-                { "role": "system", "content": meta_instructions['current_time']}, # CURRENT TIME         
+                { "role": "system", "content": meta_instructions['current_time']}, # CURRENT TIME
                 { "role": "system", "content": action_instructions}, # CURRENT ACTIONS
                 { "role": "system", "content": belief_str }, # BELIEF SYSTEM
                 { "role": "system", "content": meta_instructions['answer_from_belief']}
             ]
-            
+
             # Add the incoming messages
-            for msg in message_list:      
-                messages.append(msg)       
-                
+            for msg in message_list:
+                messages.append(msg)
+
             # Initialize approved_tools with default empty list
             approved_tools = []
-                
+
             # Request asking the recommended tools for this action
             if action_tools and not no_tools:
-                messages.append({ "role": "system", "content":f'In case you need them, the following tools are recommended to execute this action: {json.dumps(action_tools)}'})  
-                
+                messages.append({ "role": "system", "content":f'In case you need them, the following tools are recommended to execute this action: {json.dumps(action_tools)}'})
+
                 approved_tools = [tool.strip() for tool in action_tools.split(',')]
-                    
-            # Tools           
-            '''   
+
+            # Tools
+            '''
             tool.input should look like this in the database:
-                
+
                 {
-                    "origin": { 
+                    "origin": {
                         "type": "string",
                         "description": "The departure city code or name",
                         "required":true
                     },
-                    "destination": { 
-                        "type": "string", 
+                    "destination": {
+                        "type": "string",
                         "description": "The arrival city code or name",
                         "required":true
                     }
                 }
             '''
-            
-            
-            if no_tools:                
-                available_tools = None      
-                   
-            else:         
+
+
+            if no_tools:
+                available_tools = None
+
+            else:
                 available_tools_raw = list_tools
-                
-                print(f'List Tools:{available_tools_raw}')
-                
-                available_tools = [] 
+
+                #print(f'List Tools:{available_tools_raw}') #legacy print
+
+                available_tools = []
                 for t in available_tools_raw:
-                    
+
                     if t.get('key') in approved_tools:
                         # Parse the escaped JSON string into a Python object
                         try:
@@ -1640,10 +1641,10 @@ class AgentUtilities:
                         except json.JSONDecodeError:
                             print(f"Invalid JSON in tool input for tool {t.get('key', 'unknown')}. Using empty array.")
                             tool_input = []
-                        
+
                         dict_params = {}
                         required_params = []
-                        
+
                         # Handle new format: array of objects with name, hint, required
                         if isinstance(tool_input, list):
                             for param in tool_input:
@@ -1651,12 +1652,12 @@ class AgentUtilities:
                                     param_name = param['name']
                                     param_hint = param['hint']
                                     param_required = param.get('required', False)
-                                    
+
                                     dict_params[param_name] = {
                                         'type': 'string',
                                         'description': param_hint
                                     }
-                                    
+
                                     if param_required:
                                         required_params.append(param_name)
                         # Handle old format for backward compatibility
@@ -1664,9 +1665,9 @@ class AgentUtilities:
                             for key, val in tool_input.items():
                                 dict_params[key] = {'type': 'string', 'description': val}
                                 required_params.append(key)
-                                
+
                         print(f'Required parameters:{required_params}')
-                            
+
                         tool = {
                             'type': 'function',
                             'function': {
@@ -1677,11 +1678,11 @@ class AgentUtilities:
                                     'properties': dict_params,
                                     'required': required_params
                                 }
-                            }    
+                            }
                         }
-    
-                        available_tools.append(tool)            
-                    
+
+                        available_tools.append(tool)
+
             # Prompt
             prompt = {
                     "model": self.AI_1_MODEL,
@@ -1690,13 +1691,13 @@ class AgentUtilities:
                     "temperature":0,
                     "tool_choice": "auto"
                 }
-              
+
             prompt = self.sanitize(prompt)
             #print(f'RAW PROMPT >> {prompt}')
             response = self.llm(prompt)
             #print(f'RAW RESPONSE >> {response}')
-          
-            
+
+
             if not response:
                 return {
                     'success': False,
@@ -1704,8 +1705,8 @@ class AgentUtilities:
                     'input': '',
                     'output': response
                 }
-                
-            
+
+
             validation = self.validate_interpret_openai_llm_response(response)
             if not validation['success']:
                 return {
@@ -1714,20 +1715,20 @@ class AgentUtilities:
                     'input': response,
                     'output': validation
                 }
-            
+
             validated_result = validation['output']
-           
+
             # Saving : A) The tool call, or B) The message to the user
-            self.save_chat(validated_result)  
- 
-                      
+            self.save_chat(validated_result)
+
+
             return {
                 'success': True,
                 'action': action,
                 'input': prompt,
                 'output': validated_result
             }
-            
+
         except Exception as e:
             print(f"Error in interpret() message: {e}")
             return {
@@ -1736,36 +1737,36 @@ class AgentUtilities:
                 'input': '',
                 'output': str(e)
             }
-    
-        
-        
+
+
+
     ## Execution of Intentions
     def act(self,plan,list_tools=[]):
         action = 'act'
-        
+
         list_handlers = {}
         for t in list_tools_raw:
             list_handlers[t.get('key', '')] = t.get('handler', '')
-            
+
         self._update_context(list_handlers=list_handlers)
-    
+
         """Execute the current intention and return standardized response"""
         try:
-            
+
             tool_name = plan['tool_calls'][0]['function']['name']
             params = plan['tool_calls'][0]['function']['arguments']
             if isinstance(params, str):
                 params = json.loads(params)
             tid = plan['tool_calls'][0]['id']
-            
-            print(f'tid:{tid}')
+
+            #print(f'tid:{tid}') #legacy print
 
             if not tool_name:
                 raise ValueError("❌ No tool name provided in tool selection")
-                
-            print(f"Selected tool: {tool_name}")
+
+            #print(f"Selected tool: {tool_name}") #legacy print
             self.print_chat(f'Calling tool {tool_name} with parameters {params} ', 'transient')
-            print(f"Parameters: {params}")
+            #print(f"Parameters: {params}") #legacy print
 
             # Check if handler exists
             if tool_name not in list_handlers:
@@ -1773,14 +1774,14 @@ class AgentUtilities:
                 print(error_msg)
                 self.print_chat(error_msg, 'error')
                 raise ValueError(error_msg)
-            
+
             # Check if handler is an empty string
             if list_handlers[tool_name] == '':
                 error_msg = f"❌ Handler is empty"
                 print(error_msg)
                 self.print_chat(error_msg, 'error')
                 raise ValueError(error_msg)
-                
+
             # Check if handler has the right format
             handler_route = list_handlers[tool_name]
             parts = handler_route.split('/')
@@ -1789,100 +1790,97 @@ class AgentUtilities:
                 print(error_msg)
                 self.print_chat(error_msg, 'error')
                 raise ValueError(error_msg)
-            
+
 
             portfolio = self.portfolio
             org = self.org
-            
+
             params['_portfolio'] = self.portfolio
             params['_org'] = self.org
             params['_entity_type'] = self.entity_type
             params['_entity_id'] = self.entity_id
             params['_thread'] = self.thread
-            
-            print(f'Calling {handler_route} ') 
-            
+
+            print(f'Calling {handler_route} ')
+
             response = self.SHC.handler_call(portfolio,org,parts[0],parts[1],params)
 
             #print(f'Handler response:{response}') #Verboso
             response_clean = {k: v for k, v in response.items() if k not in ['stack', 'output']}
             response_clean['output_size'] = len(str(response.get('output', '')))
-            print(f'Handler response (no stack/output):{response_clean}')
+            #print(f'Handler response (no stack/output):{response_clean}') #legacy print
 
             if not response['success']:
                 return {'success':False,'action':action,'input':params,'output':response}
 
-            # The response of every handler always comes nested 
+            # The response of every handler always comes nested
             clean_output = response['output']
             clean_output_str = json.dumps(clean_output, cls=DecimalEncoder)
-            
+
             interface = None
-            
+
             # The handler determines the interface
             if isinstance(response['output'], dict) and 'interface' in response['output']:
                 interface = response['output']['interface']
             elif isinstance(response['output'], list) and len(response['output']) > 0 and 'interface' in response['output'][0]:
                 interface = response['output'][0]['interface']
 
-               
-            
+
+
             tool_out = {
                     "role": "tool",
                     "tool_call_id": f'{tid}',
                     "content": clean_output_str,
                     "tool_calls":False
                 }
-            
+
 
             # Save the message after it's created
             if interface:
                 self.save_chat(tool_out,interface=interface)
-                
+
             else:
                 self.save_chat(tool_out)
-                
-                
-            
-            print(f'flag3')
-            
+
+
+
+            #print(f'flag3') #legacy print
+
             # Results coming from the handler
             self._update_context(execute_intention_results=tool_out)
-            
-            print(f'flag4')
-            
+
+            #print(f'flag4') #legacy print
+
             # Save handler result to workspace
-            
+
             # Turn an object like this one: {"people":"4","time":"16:00","date":"2025-06-04"}
             # Into a string like this one: "4/16:00/2026-06-04"
             # If the value of each key is not a string just output an empty space in its place
             #params_str = self.format_object_to_slash_string(params)
-            index = f'irn:tool_rs:{handler_route}' 
-            tool_input = plan['tool_calls'][0]['function']['arguments'] 
+            index = f'irn:tool_rs:{handler_route}'
+            tool_input = plan['tool_calls'][0]['function']['arguments']
             #input is a serialize json, you need to turn it into a python object before inserting it into the value dictionary
             tool_input_obj = json.loads(tool_input) if isinstance(tool_input, str) else tool_input
             value = {'input': tool_input_obj, 'output': clean_output}
             self.mutate_workspace({'cache': {index:value}})
-            
-            print(f'flag5')
-            
+
+            #print(f'flag5') #legacy print
+
             #print(f'message output: {tool_out}')
             print("✅ Tool execution complete.")
-            
+
             return {"success": True, "action": action, "input": plan, "output": tool_out}
-                    
+
         except Exception as e:
 
             error_msg = f"❌ Execute Intention failed. @act trying to run tool:'{tool_name}': {str(e)}"
-            self.print_chat(error_msg,'error') 
+            self.print_chat(error_msg,'error')
             print(error_msg)
             self._update_context(execute_intention_error=error_msg)
-            
+
             error_result = {
-                "success": False, "action": action,"input": plan,"output": str(e)    
+                "success": False, "action": action,"input": plan,"output": str(e)
             }
-            
+
             self._update_context(execute_intention_results=error_result)
             return error_result
-        
-        
-     
