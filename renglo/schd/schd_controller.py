@@ -233,6 +233,7 @@ class SchdController:
         #print(f'Calling handler:{handler}, payload:{payload}') #Verboso
 
         try:
+            print(f"[SCHD] handler_call_start | extension={extension} | handler={handler}")
             # We override portfolio, org and extension that might come in the payload.
             payload['portfolio'] = portfolio
             payload['org'] = org
@@ -332,10 +333,11 @@ class SchdController:
                 return {'success': False, 'action': action, 'handler': handler, 'input': payload, 'output': canonical, 'stack': response}
             canonical = out.get('output', out)
             interface = out.get('interface') if isinstance(out, dict) else None
+            print(f"[SCHD] handler_call_end | extension={extension} | handler={handler} | success=True")
             return {'success': True, 'action': action, 'handler': handler, 'input': payload, 'interface': interface, 'output': canonical, 'stack': response}
 
         except Exception as e:
-            print(f'Error @handler_call:: {e}')
+            print(f'Error @handler_call:: {e}') #logging error
             return {'success':False,'action':action,'handler':handler,'input':payload,'output':f'Error @handler_call:: {e}'}
 
     def handler_check(self,portfolio,org,extension,handler,payload):
@@ -344,6 +346,7 @@ class SchdController:
         #print(f'Calling handler check:{handler}, payload:{payload}') #Verboso
 
         try:
+            print(f"[SCHD] handler_check_start | extension={extension} | handler={handler}")
             # We override portfolio, org and extension that might come in the payload.
             payload['portfolio'] = portfolio
             payload['org'] = org
@@ -362,10 +365,11 @@ class SchdController:
                 return {'success': False, 'action': action, 'handler': handler, 'input': payload, 'output': canonical, 'stack': response}
             canonical = out.get('output', out)
             interface = out.get('interface') if isinstance(out, dict) else None
+            print(f"[SCHD] handler_check_end | extension={extension} | handler={handler} | success=True")
             return {'success': True, 'action': action, 'handler': handler, 'input': payload, 'interface': interface, 'output': canonical, 'stack': response}
 
         except Exception as e:
-            print(f'Error @handler_check: {e}')
+            print(f'Error @handler_check: {e}') #logging error
             return {'success':False,'action':action,'handler':handler,'input':payload,'output':f'Error @handler_call: {e}'}
 
     def delete_rule(self, rule_name):

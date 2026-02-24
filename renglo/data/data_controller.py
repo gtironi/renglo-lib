@@ -1088,6 +1088,7 @@ class DataController:
             result['success'] = True
             result['message'] = 'Item saved (PUT)'
             result['path'] = str(portfolio+'/'+org+'/'+ring+'/'+idx)
+            print(f"[DOC] save | path={result['path']} | status=success")
             status = 200
             self.logger.debug('Returned object:'+str(result)) ## COMMENT OUT
 
@@ -1097,6 +1098,7 @@ class DataController:
             result['success'] = False
             result['message'] = 'Item could not be saved'
             result['error'] = response['error']
+            print(f"[DOC] save | path={portfolio+'/'+org+'/'+ring+'/'+idx} | status=failed") #logging error
             status = 500
             self.logger.debug('Returned object:'+str(result))
 

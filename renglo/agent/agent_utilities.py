@@ -233,6 +233,7 @@ class AgentUtilities:
             }
         """
         try:
+            print(f"[DOC] save_chat | msg_type={msg_type or 'auto'} | next={next}")
             if msg_type == 'consent':
                 #print('Sending consent form') #legacy print
                 # This is a consent request from the agent to the user
@@ -475,6 +476,7 @@ class AgentUtilities:
             # Sanitize changes early to prevent serialization errors in logging
             changes = self.sanitize(changes)
             first_key = next(iter(changes), None)
+            print(f"[WORKSPACE] mutation | keys={list(changes.keys())} | first={first_key}")
             #print("MUTATE_WORKSPACE>>", first_key) #legacy print
 
             # 1. Get the workspace in this thread
@@ -602,7 +604,7 @@ class AgentUtilities:
                         workspace['plan'][plan_id] = self.sanitize(output)
 
                 if key == 'new_state_machine':
-                    print('Initializing state machine')
+                    print('[STATE_MACHINE] initializing')
                     if isinstance(output, dict):
                         plan_id = output['plan_id']
                         if 'state_machine' not in workspace:
@@ -699,6 +701,7 @@ class AgentUtilities:
                 sanitized_workspace,
                 workspace['_id']
             )
+            print(f"[WORKSPACE] mutation_done | workspace_id={workspace.get('_id')}")
             return True
 
         except Exception as e:
