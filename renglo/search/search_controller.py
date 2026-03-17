@@ -8,6 +8,43 @@ from renglo.search.search_index_service import SearchIndexService
 class SearchController:
     """
     Search API controller. All searches require tenant_id - no cross-tenant results.
+    
+    
+    Usage
+        Option A – Restrict search to specific fields
+
+        {
+        "query": "Miami Jun 2nd",
+        "datatypes": ["noma_travels"],
+        "search_fields": ["title"]
+        }
+        Only attributes.title is searched; _search_text is ignored.
+
+        Option B – Boost fields while still searching all
+
+        {
+        "query": "Miami Jun 2nd",
+        "datatypes": ["noma_travels"],
+        "boost_fields": {"title": 4}
+        }
+        Searches attributes.title (boosted) and _search_text.
+
+        Option C – Restrict and boost
+
+        {
+        "query": "Miami Jun 2nd",
+        "datatypes": ["noma_travels"],
+        "search_fields": ["title", "flights"],
+        "boost_fields": {"title": 4}
+        }
+        Searches only title and flights, with title boosted.
+
+        For the search_trip tool, add to init:
+
+        "init": "{\"datatypes\":[\"noma_travels\"],\"limit\":20,\"offset\":0,\"boost_fields\":{\"title\":4}}"
+        If search_fields is set and a document lacks that attribute (e.g. noma_attendants without title), that document will not match, which is expected when restricting by field.
+
+
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -22,10 +59,17 @@ class SearchController:
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
         offset: int = 0,
+        search_fields: Optional[List[str]] = None,
+        boost_fields: Optional[Dict[str, float]] = None,
     ) -> Dict[str, Any]:
         """
         Full-text search with MANDATORY tenant_id filter.
         Never returns cross-tenant results.
+
+        search_fields: If provided, search ONLY on these attributes (attributes.<field>).
+            Ignores _search_text. Use when the caller knows which fields to search.
+        boost_fields: Dict of field_name -> boost factor. Boosts attributes.<field> in ranking.
+            E.g. {"title": 4} boosts title matches. Works with or without search_fields.
         """
         if not self.search_index.is_enabled():
             return {
@@ -59,10 +103,40 @@ class SearchController:
             bool_query = {'must': must}
 
             if query and query.strip():
-                bool_query['should'] = [
-                    {'match': {'_search_text': {'query': query, 'operator': 'or'}}},
-                ]
-                bool_query['minimum_should_match'] = 1
+                should_clauses = []
+                if search_fields:
+                    for field in search_fields:
+                        if not field or not isinstance(field, str):
+                            continue
+                        boost = (boost_fields or {}).get(field, 1.0)
+                        should_clauses.append({
+                            'match': {
+                                f'attributes.{field}': {
+                                    'query': query,
+                                    'operator': 'or',
+                                    'boost': boost,
+                                },
+                            },
+                        })
+                else:
+                    if boost_fields:
+                        for field, boost in boost_fields.items():
+                            if field and isinstance(field, str) and isinstance(boost, (int, float)):
+                                should_clauses.append({
+                                    'match': {
+                                        f'attributes.{field}': {
+                                            'query': query,
+                                            'operator': 'or',
+                                            'boost': float(boost),
+                                        },
+                                    },
+                                })
+                    should_clauses.append({
+                        'match': {'_search_text': {'query': query, 'operator': 'or'}},
+                    })
+                if should_clauses:
+                    bool_query['should'] = should_clauses
+                    bool_query['minimum_should_match'] = 1
 
             search_body = {
                 'query': {'bool': bool_query},

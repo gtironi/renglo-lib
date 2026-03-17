@@ -46,12 +46,16 @@ Documents are indexed automatically on:
   "datatypes": ["noma_travels", "noma_rel"],
   "filters": {"status": "confirmed"},
   "limit": 20,
-  "offset": 0
+  "offset": 0,
+  "search_fields": ["title"],
+  "boost_fields": {"title": 4}
 }
 ```
 
 - `tenant_id` = `org` (mandatory, from URL)
 - Results are always scoped to the tenant
+- `search_fields`: Optional. If provided, search ONLY on these attributes (`attributes.<field>`). Ignores `_search_text`. Use when the caller knows which fields to search.
+- `boost_fields`: Optional. Dict of `field_name` -> boost factor. Boosts `attributes.<field>` in ranking. E.g. `{"title": 4}` boosts title matches. Works with or without `search_fields`.
 
 ## Tenant Isolation
 
